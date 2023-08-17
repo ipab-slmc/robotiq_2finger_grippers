@@ -43,7 +43,11 @@ Module comModbusRtu: defines a class which communicates with Robotiq Grippers us
 The module depends on pymodbus (http://code.google.com/p/pymodbus/) for the Modbus RTU client.
 """
 
-from pymodbus.client.serial import ModbusSerialClient
+# from pymodbus.client.serial import ModbusSerialClient
+from pymodbus.client import ModbusSerialClient
+from pymodbus.transaction import ModbusRtuFramer
+# from pymodbus import pymodbus_apply_logging_config
+from pymodbus.exceptions import ModbusException, ModbusIOException
 from math import ceil
 
 class communication:	
@@ -52,8 +56,10 @@ class communication:
       self.client = None
       
    def connectToDevice(self, device):
+      # activate debugging
+      # pymodbus_apply_logging_config("DEBUG")
       """Connection to the client - the method takes the IP address (as a string, e.g. '192.168.1.11') as an argument."""
-      self.client = ModbusSerialClient(method='rtu',port=device,stopbits=1, bytesize=8, baudrate=115200, timeout=0.2)
+      self.client = ModbusSerialClient(port=device, framer=ModbusRtuFramer, stopbits=1, bytesize=8, baudrate=115200, timeout=0.2)
       if not self.client.connect():
           print("Unable to connect to %s" % device)
           return False
@@ -73,12 +79,12 @@ class communication:
       message = []
 
       #Fill message by combining two bytes in one register
-      for i in range(0, len(data)/2):
+      for i in range(0, len(data)//2):
          message.append((data[2*i] << 8) + data[2*i+1])
 
       #To do!: Implement try/except 
       try:
-         self.client.write_registers(0x03E8, message, unit=0x0009)
+         self.client.write_registers(0x03E8, message, slave=0x0009)
       except:
          print("Modbus write operation failure")
          return False
@@ -88,17 +94,18 @@ class communication:
       """Sends a request to read, wait for the response and returns the Gripper status. The method gets the number of bytes to read as an argument"""
       numRegs = int(ceil(numBytes/2.0))
 
+      assert self.client.connected
       #To do!: Implement try/except 
       #Get status from the device
       try:
-        response = self.client.read_holding_registers(0x07D0, numRegs, unit=0x0009)
-      except Exception as e:
+        response = self.client.read_holding_registers(0x07D0, numRegs, slave=0x0009)
+      except (ModbusException, ModbusIOException) as e:
         print(e)
         return None
-
       # When reading failes, response is of type None 
-      if response is None:
-      #   print("Failed to receive status")
+      if isinstance(response, ModbusIOException):
+        print("Failed to receive status")
+        print(response)
         return None
 
       #Instantiate output as an empty list
