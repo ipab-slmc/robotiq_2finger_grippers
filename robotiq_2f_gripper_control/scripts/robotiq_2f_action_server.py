@@ -62,7 +62,7 @@ class CommandGripperActionServer(object):
         rospy.signal_shutdown("Gripper on port %s seems not to respond" % (self._driver._comport))
     
     def execute_cb(self, goal_command):
-      rospy.logdebug( (self._action_name + ": New goal received Pos:%.3f Speed: %.3f Force: %.3f Force-Stop: %r") % (goal_command.position, goal_command.speed, goal_command.force, goal_command.stop) )
+      rospy.loginfo( (self._action_name + ": New goal received Pos:%.3f Speed: %.3f Force: %.3f Force-Stop: %r") % (goal_command.position, goal_command.speed, goal_command.force, goal_command.stop) )
       # Send incoming command to gripper driver
       self._driver.update_gripper_command(goal_command)
       # Wait until command is received by the gripper 
@@ -82,7 +82,7 @@ class CommandGripperActionServer(object):
       while not rospy.is_shutdown() and self._processing_goal and not self._is_stalled:             # While moving and not stalled provide feedback and check for result
           feedback = self._driver.get_current_gripper_status()
           self._action_server.publish_feedback( feedback )
-          rospy.logdebug("Error = %.5f Requested position = %.3f Current position = %.3f" % (abs(feedback.requested_position - feedback.position), feedback.requested_position, feedback.position))
+          rospy.loginfo("Error = %.5f Requested position = %.3f Current position = %.3f" % (abs(feedback.requested_position - feedback.position), feedback.requested_position, feedback.position))
           # Check for completition of action 
           if( feedback.fault_status != 0 and not self._is_stalled):               # Check for errors
               rospy.logerr(self._action_name + ": fault status (gFLT) is: %d", feedback.fault_status)
@@ -98,7 +98,7 @@ class CommandGripperActionServer(object):
       result = feedback                                   # Message declarations are the same 
       # Send result 
       if not self._is_stalled:
-          rospy.logdebug(self._action_name + ": goal reached or object detected Pos: %.3f PosRequested: %.3f ObjectDetected: %r" % (goal_command.position, feedback.requested_position, feedback.obj_detected) )
+          rospy.loginfo(self._action_name + ": goal reached or object detected Pos: %.3f PosRequested: %.3f ObjectDetected: %r" % (goal_command.position, feedback.requested_position, feedback.obj_detected) )
           self._action_server.set_succeeded(result)  
       else:
           rospy.logerr(self._action_name + ": goal aborted Pos: %.3f PosRequested: %.3f ObjectDetected: %r" % (goal_command.position, feedback.requested_position, feedback.obj_detected) )
@@ -164,7 +164,7 @@ class CommandGripperActionServer(object):
         current_status = self._driver.get_current_gripper_status()          
         feedback.actual.positions = [self._driver.get_current_joint_position()]
         error = abs(feedback.actual.positions[0] - feedback.desired.positions[0])
-        rospy.logdebug("Error : %.3f -- Actual: %.3f -- Desired: %.3f", error, self._driver.get_current_joint_position(), feedback.desired.positions[0])           
+        rospy.loginfo("Error : %.3f -- Actual: %.3f -- Desired: %.3f", error, self._driver.get_current_joint_position(), feedback.desired.positions[0])           
 
         feedback.error.positions = [error]
         self._joint_trajectory_action_server.publish_feedback( feedback )
@@ -194,7 +194,7 @@ class CommandGripperActionServer(object):
       # Entire trajectory was followed/reached
       watchdog.shutdown() 
      
-      rospy.logdebug(self._action_name + ": goal reached")
+      rospy.loginfo(self._action_name + ": goal reached")
       result.error_code = result.SUCCESSFUL          
       result.error_string = "Goal reached" 
       self._joint_trajectory_action_server.set_succeeded(result)  
@@ -218,11 +218,13 @@ if __name__ == "__main__":
     joint_name = rospy.get_param('~joint_name', 'finger_joint')    
     sim = rospy.get_param('~sim', False)    
 
+    gripper_type = rospy.get_param('~grip_type', "2_finger")
     # Create instance of Robotiq Gripper Driver
     if sim: # Use simulated gripper
+        # Only 2_finger supported
         gripper_driver = Robotiq2FingerSimulatedGripperDriver( stroke=stroke, joint_name=joint_name)    
     else:   # Try to connect to a real gripper 
-        gripper_driver = Robotiq2FingerGripperDriver( comport=comport, baud=baud, stroke=stroke, joint_name=joint_name)
+        gripper_driver = Robotiq2FingerGripperDriver(comport=comport, baud=baud, stroke=stroke, joint_name=joint_name,gripper_type=gripper_type)
     # Start action server 
     server = CommandGripperActionServer(rospy.get_namespace(), 'command_robotiq_action', gripper_driver)
     
