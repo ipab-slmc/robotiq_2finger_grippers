@@ -45,6 +45,7 @@ controlling a given gripper, and commanded by the user commands puubished by an 
 """
 
 from robotiq_2f_gripper_control.robotiq_2f_gripper import Robotiq2FingerGripper
+from robotiq_2f_gripper_control.robotiq_vacuum_gripper import RobotiqVacuumGripper
 from robotiq_2f_gripper_msgs.msg import RobotiqGripperCommand, RobotiqGripperStatus, CommandRobotiqGripperGoal
 from sensor_msgs.msg import JointState
 import numpy as np
@@ -74,15 +75,22 @@ class Robotiq2FingerGripperDriver:
                             1: Driver is running
                             2: Gripper has been activated
     """
-    def __init__(self, comport = '/dev/ttyUSB0', baud = '115200', stroke = 0.085, joint_name='finger_joint'):
+    def __init__(self, comport = '/dev/ttyUSB0', baud = '115200', stroke = 0.085, joint_name='finger_joint',gripper_type="2_finger"):
         self._comport = comport
         self._baud = baud
         self._joint_name = joint_name          
+        self._gripper_type = gripper_type
         
 
         # Instanciate and open communication with gripper.
-        self._gripper = Robotiq2FingerGripper(device_id=0, stroke=stroke, comport=self._comport, baud=self._baud)
-        
+        if(self._gripper_type == "2_finger"):
+            self._gripper = Robotiq2FingerGripper(device_id=0, stroke=stroke, comport=self._comport, baud=self._baud)
+            print("Using 2 Finger Gripper")
+        elif(self._gripper_type == "vacuum"):
+            print("Using Vacuum Gripper")
+            self._gripper = RobotiqVacuumGripper(device_id=0, stroke=stroke, comport=self._comport, baud=self._baud)
+
+
         self._max_joint_limit = 0.8
         if( self._gripper.stroke == 0.140 ):
             self._max_joint_limit = 0.7
