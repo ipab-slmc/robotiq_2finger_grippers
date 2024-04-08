@@ -16,7 +16,7 @@
         <geometry>
             <mesh filename="package://robotiq_vacuum_gripper_description/urdf/meshes/epick.stl" scale="0.001 0.001 0.001"/>
         </geometry>
-      <material name="black"/>
+      <material name="metal_grey"/>
     </visual>
 
     <collision>
