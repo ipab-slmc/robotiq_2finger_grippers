@@ -147,8 +147,7 @@ class RobotiqVacuumGripper:
         self._update_cmd()
 
     def stop(self):
-        self.rACT = 1
-        self.rGTO = 0
+        self.rPR = 255
         self._update_cmd()
 
     def goto(self, pos, vel, force):
